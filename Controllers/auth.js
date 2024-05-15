@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const { userSignupSchema } = require('../Schemas/user');
 const generateToken = require('../Utils/generateToken');
 const { get6DigitCode } = require('../Utils/methods');
-const sendVerificationSMS = require('../Utils/sms');
+const { sendVerificationSMS, sendInviteLinks } = require('../Utils/sms');
 const uploadImage = require('../Utils/upload');
 
 /**
@@ -20,46 +20,56 @@ module.exports.signup = async (req, res) => {
             return res.status(400).json({ error: error.message });
         }
 
-        // Check if email or phone number already exists
-        const emailOrPhoneExists = await userModel.findOne({
-            $or: [{ email: req.body.email }, { phoneNumber: req.body.phoneNumber }],
-        });
-        if (emailOrPhoneExists) {
-            return res.status(400).json({ error: 'Email or phone number already exists' });
+        const { name, email, password, phoneNumber } = req.body;
+
+        // Check if the phone number already exists (for invited users)
+        let user = await userModel.findOne({ phoneNumber });
+
+        if (user) {
+            // If email or password is not null, it means the user already registered
+            if (user.email && user.password) {
+                return res.status(400).json({ error: 'Phone number already registered' });
+            }
+        } else {
+            // Check if email already exists for new registrations
+            const emailExists = await userModel.findOne({ email });
+            if (emailExists) {
+                return res.status(400).json({ error: 'Email already exists' });
+            }
+
+            // Create a new user object
+            user = new userModel({ phoneNumber });
         }
 
         // Hash the password
         const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(req.body.password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
         const verificationCode = get6DigitCode();
 
-        // Create a new user
-        const user = new userModel({
-            name: req.body.name,
-            email: req.body.email,
-            password: hashedPassword,
-            phoneNumber: req.body.phoneNumber,
-            verificationCode: {
-                code: verificationCode,
-                expires: new Date(Date.now() + 120000),
-            },
-            isVerified: false,
-        });
+        // Update the user record with the new details
+        user.name = name;
+        user.email = email;
+        user.password = hashedPassword;
+        user.verificationCode = {
+            code: verificationCode,
+            expires: new Date(Date.now() + 120000),
+        };
+        user.isVerified = false;
 
         // Save the user to the database
         await user.save();
+
         // Send the verification code via SMS
-        await sendVerificationSMS(req.body.phoneNumber, verificationCode);
-        // Send the response
+        await sendVerificationSMS(phoneNumber, verificationCode);
+
         res.status(201).json({
             success: true,
-            message: 'User registered successfully',
-
-         });
+            message: 'User registered successfully, verification code sent',
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
-}
+};
 
 /**
  * @description Verify a user
@@ -170,8 +180,10 @@ module.exports.forgotPassword = async (req, res) => {
 module.exports.resetPassword = async (req, res) => {
     try {
         // Find the user by email
-        const user = await userModel.findOne({ email: req
-            .body.email });
+        const user = await userModel.findOne({
+            email: req
+                .body.email
+        });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -225,5 +237,87 @@ module.exports.updateProfilePicture = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
+
+/**
+ * @description  send Invitation Link to users phone number of the App to join the App
+ * @route POST /auth/invite
+ * @param (phoneNumbers, link)
+ * @access Private
+ */
+
+module.exports.invite = async (req, res) => {
+    try {
+        // Send the invitation link via SMS
+        await sendInviteLinks(req.body.phoneNumbers, req.body.message );
+        res.status(200).json({
+            success: true,
+            message: 'Invitation link sent successfully',
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+
+}
+
+/**
+ * @description Check if users exist by phone numbers and return their details
+ * @route POST /auth/check-users
+ * @param phoneNumbers
+ * @access Private
+ */
+
+module.exports.checkUsersByPhoneNumbers = async (req, res) => {
+    try {
+      const { phoneNumbers } = req.body;
+  
+      if (!Array.isArray(phoneNumbers)) {
+        return res.status(400).json({ error: 'phoneNumbers should be an array' });
+      }
+  
+      // Initialize an array to hold the results
+      const results = [];
+  
+      // Iterate through the phone numbers
+      for (const phoneNumber of phoneNumbers) {
+        const user = await userModel.findOne({ phoneNumber });
+  
+        if (user) {
+          if (user.email) {
+            // User exists and is fully registered
+            results.push({
+              phoneNumber,
+              userId: user._id,
+              profilePicture: user.profilePicture,
+              isUser: true
+            });
+          } else {
+            // User exists but is only invited (no email means they haven't completed registration)
+            results.push({
+              phoneNumber,
+              userId: user._id,
+              profilePicture: user.profilePicture,
+              isUser: false
+            });
+          }
+        } else {
+          // User does not exist
+          results.push({
+            phoneNumber,
+            isUser: false
+          });
+        }
+      }
+  
+      // Send the response
+      res.status(200).json(results);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+  
+
+  
+
 
 

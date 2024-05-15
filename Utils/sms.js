@@ -16,3 +16,22 @@ module.exports.sendVerificationSMS = async (phoneNumber, code) => {
     console.error(error);
   }
 };
+
+module.exports.sendInviteLinks = async (phoneNumbers, message) => {
+  try {
+    const promises = phoneNumbers.map(async (phoneNumber) => {
+      const msg = await client.messages.create({
+        body: message,
+        from: process.env.TWILIO_PHONE_NUMBER, 
+        to: phoneNumber
+      });
+
+      console.log(`Message sent to ${phoneNumber}: ${msg.sid}`);
+    });
+
+    await Promise.all(promises);
+    console.log('All messages sent successfully');
+  } catch (error) {
+    console.error('Error sending messages:', error);
+  }
+};
