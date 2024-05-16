@@ -82,7 +82,7 @@ module.exports.createCircle = async (req, res) => {
 module.exports.updateCirlceImage = async (req, res) => {
   try {
     // Upload the image to Azure Blob Storage
-    const image = await uploadImage('circle-image', req.file);
+    const image = await uploadImage('circle', req.file);
     res.status(200).json({
       success: true,
       message: 'Profile picture updated successfully',

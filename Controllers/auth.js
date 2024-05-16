@@ -258,7 +258,7 @@ module.exports.resetPassword = async (req, res) => {
 module.exports.updateProfilePicture = async (req, res) => {
     try {
         // Upload the image to Azure Blob Storage
-        const image = await uploadImage('profile-pictures', req.file);
+        const image = await uploadImage('circle', req.file);
         // Find the user by id
         const user = await userModel.findById(req.user._id);
         if (!user) {
