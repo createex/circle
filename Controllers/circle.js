@@ -1,8 +1,8 @@
 const circleModel = require('../Models/circle');
 const { circleSchema } = require('../Schemas/circle');
 const userModel = require('../Models/user');
-const { invite } = require('./auth')
-const {uploadImage} = require('../Utils/upload');
+const { invite } = require('../Utils/invite');
+const { uploadImage } = require('../Utils/upload');
 
 /**
  * @description Create a new circle
@@ -39,25 +39,29 @@ module.exports.createCircle = async (req, res) => {
         // Create a new user with only the phone number
         user = new userModel({ phoneNumber });
         await user.save();
-    
+
       }
 
 
       // Add the new user to the circle members
       circle.members.push(user._id);
-  
+
       // Construct the invitation link
       const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
 
       // Send the invitation link via SMS
       const message = `${req.user.phoneNumber} has invited you to join the App. Click on the link to join: ${inviteLink}`;
-      await invite([phoneNumber], message);
-      console.log("circle");
+      try {
+        await invite([phoneNumber], message);
+      } catch (error) {
+        console.error('Failed to send invite:', error);
+        return res.status(500).json({ error: 'Failed to send invite' });
+      }
     }
 
     // Save the Circle to the database
     await circle.save();
-   
+
     res.status(201).json({
       success: true,
       message: 'Circle created and invitations sent successfully',
@@ -77,16 +81,16 @@ module.exports.createCircle = async (req, res) => {
 
 module.exports.updateCirlceImage = async (req, res) => {
   try {
-      // Upload the image to Azure Blob Storage
-      const image = await uploadImage('circle-image', req.file);
-      res.status(200).json({
-          success: true,
-          message: 'Profile picture updated successfully',
-          data: image,
-      });
+    // Upload the image to Azure Blob Storage
+    const image = await uploadImage('circle-image', req.file);
+    res.status(200).json({
+      success: true,
+      message: 'Profile picture updated successfully',
+      data: image,
+    });
   }
   catch (error) {
-      res.status(500).json({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 }
 
