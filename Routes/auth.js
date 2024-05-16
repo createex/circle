@@ -10,7 +10,9 @@ const {
     forgotPassword,
     resetPassword,
     updateProfilePicture,
-    invite
+    invite,
+    resendCode,
+    checkUsersByPhoneNumbers
 } = require("../Controllers/auth");
 
 //Middlewares
@@ -22,10 +24,14 @@ router.post("/login", login);
 router.post("/verify", verify);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
-router.post("/invite", invite);
+router.post("/resend-code", resendCode);
+
+
 
 
 router.use(customerMiddleware);
+router.post("/invite", invite);
+router.get("/check-users", checkUsersByPhoneNumbers);
 router.post("/update-profile-picture", upload.single('profilePicture'), updateProfilePicture);
 
 module.exports = router;

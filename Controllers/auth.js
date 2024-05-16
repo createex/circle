@@ -4,7 +4,7 @@ const { userSignupSchema } = require('../Schemas/user');
 const generateToken = require('../Utils/generateToken');
 const { get6DigitCode } = require('../Utils/methods');
 const { sendVerificationSMS, sendInviteLinks } = require('../Utils/sms');
-const uploadImage = require('../Utils/upload');
+const {uploadImage} = require('../Utils/upload');
 
 /**
  * @description Register a new user
@@ -15,7 +15,7 @@ const uploadImage = require('../Utils/upload');
 module.exports.signup = async (req, res) => {
     try {
         // Validate the request body
-        const { error } = userSignupSchema(req.body);
+        const { error } = userSignupSchema.validate(req.body);
         if (error) {
             return res.status(400).json({ error: error.message });
         }
@@ -70,6 +70,46 @@ module.exports.signup = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+/**
+ * @description resend the code on phone number 
+ * @route POST /auth/resend-code
+ * @access Public
+ */
+
+module.exports.resendCode = async (req, res) => {
+    try {
+        // Find the user by phone number
+        const user = await userModel .findOne({ phoneNumber: req.body.phoneNumber });
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        // Check if the user is already verified
+        if (user.isVerified) {
+            return res.status(400).json({ error: 'User already verified' });
+        }
+        // Check if the verification code is expired
+        if (user.verificationCode.expires > Date.now()) {
+            return res.status(400).json({ error: 'Verification code not expired' });
+        }
+        // Resend the verification code
+        const verificationCode = get6DigitCode();
+        user.verificationCode = {
+            code: verificationCode,
+            expires: new Date(Date.now() + 120000),
+        };
+        await user.save();
+        await sendVerificationSMS(user.phoneNumber, verificationCode);
+        res.status(200).json({
+            success: true,
+            message: 'Verification code sent successfully',
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
 
 /**
  * @description Verify a user
@@ -247,22 +287,20 @@ module.exports.updateProfilePicture = async (req, res) => {
 
 module.exports.invite = async (req, res) => {
     try {
-        // Send the invitation link via SMS
-        await sendInviteLinks(req.body.phoneNumbers, req.body.message );
-        res.status(200).json({
-            success: true,
-            message: 'Invitation link sent successfully',
-        });
+      const { phoneNumbers, message } = req.body;
+      await sendInviteLinks(phoneNumbers, message);
+      res.status(200).json({
+        success: true,
+        message: 'Invitation link sent successfully',
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-    catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-
-}
+  };
 
 /**
  * @description Check if users exist by phone numbers and return their details
- * @route POST /auth/check-users
+ * @route GET /auth/check-users
  * @param phoneNumbers
  * @access Private
  */

@@ -2,7 +2,7 @@ const circleModel = require('../Models/circle');
 const { circleSchema } = require('../Schemas/circle');
 const userModel = require('../Models/user');
 const { invite } = require('./auth')
-const uploadImage = require('../Utils/upload');
+const {uploadImage} = require('../Utils/upload');
 
 /**
  * @description Create a new circle
@@ -12,7 +12,7 @@ const uploadImage = require('../Utils/upload');
 
 module.exports.createCircle = async (req, res) => {
   try {
-    const { error } = circleSchema(req.body);
+    const { error } = circleSchema.validate(req.body, { abortEarly: false })
     if (error) {
       return res.status(400).json({ error: error.message });
     }
@@ -30,6 +30,7 @@ module.exports.createCircle = async (req, res) => {
       owner: ownerId,
     });
 
+
     // Handle phone numbers for non-members
     for (const phoneNumber of phoneNumbers) {
       let user = await userModel.findOne({ phoneNumber });
@@ -38,22 +39,25 @@ module.exports.createCircle = async (req, res) => {
         // Create a new user with only the phone number
         user = new userModel({ phoneNumber });
         await user.save();
+    
       }
+
 
       // Add the new user to the circle members
       circle.members.push(user._id);
-
+  
       // Construct the invitation link
       const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
 
       // Send the invitation link via SMS
       const message = `${req.user.phoneNumber} has invited you to join the App. Click on the link to join: ${inviteLink}`;
       await invite([phoneNumber], message);
+      console.log("circle");
     }
 
     // Save the Circle to the database
     await circle.save();
-
+   
     res.status(201).json({
       success: true,
       message: 'Circle created and invitations sent successfully',

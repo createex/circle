@@ -33,5 +33,6 @@ module.exports.sendInviteLinks = async (phoneNumbers, message) => {
     console.log('All messages sent successfully');
   } catch (error) {
     console.error('Error sending messages:', error);
+    throw error; // Ensure errors are propagated
   }
 };

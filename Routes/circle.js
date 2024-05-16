@@ -12,7 +12,8 @@ const {
 const { customerMiddleware } = require("../Middlewares/user");
 
 //routes
-router.post('./create', createCircle)
+router.use(customerMiddleware)
+router.post('/create', createCircle)
 router.post('/upload-image', upload.single('circle-image'), updateCirlceImage)
 
 module.exports = router;
