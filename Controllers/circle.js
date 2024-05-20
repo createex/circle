@@ -19,6 +19,9 @@ module.exports.createCircle = async (req, res) => {
     const { circleName, circleImage, description, type, interest, memberIds, phoneNumbers } = req.body;
     const ownerId = req.user._id;
 
+    //add self in members
+    memberIds.push(ownerId);
+
     // Create a new Circle
     const circle = new circleModel({
       circleName,

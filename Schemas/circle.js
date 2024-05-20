@@ -32,10 +32,8 @@ const circleSchema = joi.object({
         'any.only': `"interest" should be one of 'photography', 'shopping', 'music', 'movies',
         'fitness', 'travelling', 'sports', 'videoGames', 'nightOut', 'art'`
     }),
-    memberIds: joi.array().items(joi.string()).required().messages({
+    memberIds: joi.array().items(joi.string()).messages({
         'array.base': `"members" should be a type of 'array'`,
-        'array.empty': `"members" cannot be an empty field`,
-        'any.required': `"members" is a required field`
     }),
     phoneNumbers: joi.array().items(joi.string()).messages({
         'array.base': `"invitedPhoneNumbers" should be a type of 'array'`,
