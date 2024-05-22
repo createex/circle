@@ -11,18 +11,20 @@ const { uploadImage } = require('../Utils/upload');
  */
 
 module.exports.createCircle = async (req, res) => {
+  const { error } = circleSchema.validate(req.body, { abortEarly: false });
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  const { circleName, circleImage, description, type, interest, memberIds, phoneNumbers } = req.body;
+  const ownerId = req.user._id;
+
   try {
-    const { error } = circleSchema.validate(req.body, { abortEarly: false })
-    if (error) {
-      return res.status(400).json({ error: error.message });
+    // Ensure the owner is added as a member if not already included
+    if (!memberIds.includes(ownerId)) {
+      memberIds.push(ownerId);
     }
-    const { circleName, circleImage, description, type, interest, memberIds, phoneNumbers } = req.body;
-    const ownerId = req.user._id;
 
-    //add self in members
-    memberIds.push(ownerId);
-
-    // Create a new Circle
     const circle = new circleModel({
       circleName,
       circleImage,
@@ -33,48 +35,50 @@ module.exports.createCircle = async (req, res) => {
       owner: ownerId,
     });
 
-
-    // Handle phone numbers for non-members
-    for (const phoneNumber of phoneNumbers) {
+    // Handle invitations and addition of users via phone number
+    const invitePromises = phoneNumbers.map(async (phoneNumber) => {
       let user = await userModel.findOne({ phoneNumber });
-
       if (!user) {
-        // Create a new user with only the phone number
+        // Create a new user if not found
         user = new userModel({ phoneNumber });
         await user.save();
-
+      }
+      // Add user to the circle members array
+      if (!circle.members.includes(user._id)) {
+        circle.members.push(user._id);
       }
 
-
-      // Add the new user to the circle members
-      circle.members.push(user._id);
-
-      // Construct the invitation link
+      // Construct and send the invitation link
       const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
+      const message = `${req.user.name} has invited you to join the circle on App. Register here: ${inviteLink}`;
+      await invite([phoneNumber], message);  
+    });
 
-      // Send the invitation link via SMS
-      const message = `${req.user.phoneNumber} has invited you to join the App. Click on the link to join: ${inviteLink}`;
-      try {
-        await invite([phoneNumber], message);
-      } catch (error) {
-        console.error('Failed to send invite:', error);
-        return res.status(500).json({ error: 'Failed to send invite' });
-      }
-    }
+    // Execute all invite operations
+    await Promise.all(invitePromises);
 
-    // Save the Circle to the database
+    // Save the circle to the database
     await circle.save();
+
+    // Update all members to include this circle in their memberGroups
+    await userModel.updateMany(
+      { _id: { $in: circle.members } },
+      { $addToSet: { memberGroups: circle._id } }
+    );
+
+    // Update the owner's ownedGroups separately
+    await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } });
 
     res.status(201).json({
       success: true,
-      message: 'Circle created and invitations sent successfully',
+      message: 'Circle created successfully, and invitations sent.',
       circle,
     });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Error creating circle:', error);
+    res.status(500).json({ error: 'Failed to create circle' });
   }
 };
-
 
 /**
  * @description upload cricle image 

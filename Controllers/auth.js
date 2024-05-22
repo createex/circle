@@ -186,8 +186,8 @@ module.exports.login = async (req, res) => {
 
 module.exports.forgotPassword = async (req, res) => {
     try {
-        // Find the user by email
-        const user = await userModel.findOne({ email: req.body.email });
+        // Find the user by phoneNumber
+        const user = await userModel.findOne({ phoneNumber: req.body.phoneNumber });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
