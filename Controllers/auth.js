@@ -221,8 +221,8 @@ module.exports.resetPassword = async (req, res) => {
     try {
         // Find the user by email
         const user = await userModel.findOne({
-            email: req
-                .body.email
+            phoneNumber: req
+                .body.phoneNumber
         });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
