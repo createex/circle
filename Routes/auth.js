@@ -31,7 +31,7 @@ router.post("/resend-code", resendCode);
 
 router.use(customerMiddleware);
 router.post("/invite", invite);
-router.get("/check-users", checkUsersByPhoneNumbers);
+router.post("/check-users", checkUsersByPhoneNumbers);
 router.post("/update-profile-picture", upload.single('profilePicture'), updateProfilePicture);
 
 module.exports = router;
