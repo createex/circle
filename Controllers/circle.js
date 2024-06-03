@@ -3,6 +3,7 @@ const { circleSchema } = require('../Schemas/circle');
 const userModel = require('../Models/user');
 const { invite } = require('../Utils/invite');
 const { uploadImage } = require('../Utils/upload');
+const convosModel = require('../Models/convos');
 
 /**
  * @description Create a new circle
@@ -51,11 +52,16 @@ module.exports.createCircle = async (req, res) => {
       // Construct and send the invitation link
       const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
       const message = `${req.user.name} has invited you to join the circle on App. Register here: ${inviteLink}`;
-      await invite([phoneNumber], message);  
+      await invite([phoneNumber], message);
     });
 
     // Execute all invite operations
     await Promise.all(invitePromises);
+
+    //now create the convos and add to the circle with empty pinned messages
+    const convos = new convosModel({ pinnedMessages: [] }); 
+    await convos.save();
+    circle.convos = convos._id;
 
     // Save the circle to the database
     await circle.save();
@@ -68,6 +74,9 @@ module.exports.createCircle = async (req, res) => {
 
     // Update the owner's ownedGroups separately
     await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } });
+
+
+
 
     res.status(201).json({
       success: true,

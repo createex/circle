@@ -4,7 +4,9 @@ const router = require('express').Router();
 const {
     sendMessage,
     getMessages,
-    getConversations
+    getConversations,
+    pinMessage,
+    getPinnedMessages
 } = require('../Controllers/messenger');
 
 //Middlewares
@@ -15,6 +17,8 @@ router.use(customerMiddleware);
 router.post('/send', sendMessage);
 router.get('/get/:circleId', getMessages);
 router.get('/conversations', getConversations);
+router.post('/pin/:circleId/:messageId', pinMessage);
+router.get('/pinned/:circleId', getPinnedMessages);
 
 
 module.exports = router;
