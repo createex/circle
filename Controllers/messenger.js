@@ -115,3 +115,53 @@ module.exports.getMessages = async (req, res) => {
     }
 };
 
+/**
+ * @description get the conversations of a user (all circles)
+ * @route GET /api/messenger/conversations
+ * @access Private
+ */
+
+module.exports.getConversations = async (req, res) => {
+    try {
+        const userId = req.user._id;
+
+        // Find all circles where the user is a member
+        const circles = await circleModel.find({ members: userId });
+
+        // Get the latest message in each circle
+        const conversations = await Promise.all(circles.map(async circle => {
+            const latestMessage = await messageModel.findOne({ circleId: circle._id })
+                .sort({ createdAt: -1 })
+                .populate({
+                    path: 'sender',
+                    select: 'name profilePicture _id'
+                })
+                .exec();
+
+            return {
+                circleId: circle._id,
+                circleName: circle.circleName,
+                circleImage: circle.circleImage,
+                latestMessage: latestMessage ? {
+                    senderId: latestMessage.sender._id,
+                    senderName: latestMessage.sender.name,
+                    senderProfilePicture: latestMessage.sender.profilePicture,
+                    text: latestMessage.message,
+                    sentAt: latestMessage.createdAt
+                } : null
+            };
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: conversations
+        });
+    } catch (error) {
+        console.error('Failed to retrieve conversations:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to retrieve conversations'
+        });
+    }
+}
+
