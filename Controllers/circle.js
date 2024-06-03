@@ -81,6 +81,36 @@ module.exports.createCircle = async (req, res) => {
 };
 
 /**
+ * @description Get the members of a circle
+ * @route GET /circle/members/:circleId
+ * @access Private
+ */
+
+module.exports.getCircleMembers = async (req, res) => {
+
+  const circleId = req.params.circleId;
+  if (!circleId) {
+    return res.status(400).json({ error: 'Circle ID is required' });
+  }
+
+  try {
+    const circle = await circleModel.findById(circleId).populate('members', 'name phoneNumber _id profilePicture');
+    if (!circle) {
+      return res.status(404).json({ error: 'Circle not found' });
+    }
+    res.status(200).json({
+      success: true,
+      message: 'Circle members retrieved successfully',
+      members: circle.members,
+    });
+
+  } catch (error) {
+    console.error('Error getting circle members:', error);
+    res.status(500).json({ error: 'Failed to get circle members' });
+  }
+}
+
+/**
  * @description upload cricle image 
  * @route POST /circle/upload-image
  * @access Private

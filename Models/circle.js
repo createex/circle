@@ -8,8 +8,11 @@ const circleSchema = new mongoose.Schema({
     interest: String,
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-
+    convos: { type: mongoose.Schema.Types.ObjectId, ref: 'Convos' },
+    experiences: { type: mongoose.Schema.Types.ObjectId, ref: 'Experience' },
+    todos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Todo' }],
 },
+
     { timestamps: true }
 );
 
