@@ -6,7 +6,8 @@ const upload = multer({ storage: multer.memoryStorage() });
 const {
     createCircle,
     updateCirlceImage,
-    getCircleMembers
+    getCircleMembers,
+    getAllCircles
 } = require('./../Controllers/circle')
 
 //Middlewares
@@ -17,6 +18,7 @@ router.use(customerMiddleware)
 router.post('/create', createCircle)
 router.post('/upload-image', upload.single('circle-image'), updateCirlceImage)
 router.get('/members/:circleId', getCircleMembers)
+router.get('/all', getAllCircles)
 
 module.exports = router;
 

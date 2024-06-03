@@ -6,6 +6,7 @@ const circle = require('./circle')
 const upload = require('./upload')
 const messenger = require('./messenger')
 const todos = require('./todos')
+const stories = require('./stories')
 
 //connecting routes
 router.use('/auth', auth);
@@ -13,6 +14,7 @@ router.use('/circle', circle)
 router.use('/upload', upload)
 router.use('/messenger', messenger)
 router.use('/todos', todos)
+router.use('/stories', stories)
 
 
 

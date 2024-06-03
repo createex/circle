@@ -120,6 +120,26 @@ module.exports.getCircleMembers = async (req, res) => {
 }
 
 /**
+ * @description Get all circles (image, name, description and id only. Also sort by most recent)
+ * @route GET /circle/all
+ * @access Private
+ */
+
+module.exports.getAllCircles = async (req, res) => {
+  try {
+    const circles = await circleModel.find({}, 'circleName circleImage description').sort({ createdAt: -1 });
+    res.status(200).json({
+      success: true,
+      message: 'Circles retrieved successfully',
+      circles,
+    });
+  } catch (error) {
+    console.error('Error getting circles:', error);
+    res.status(500).json({ error: 'Failed to get circles' });
+  }
+}
+
+/**
  * @description upload cricle image 
  * @route POST /circle/upload-image
  * @access Private
