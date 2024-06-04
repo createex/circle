@@ -12,10 +12,12 @@ const userSchema = new mongoose.Schema({
     verificationCode: {
         code: String,
         expires: Date,
-    },  
+    }, 
+    itineraries: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Itinerary' }], 
     ownedGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],
     memberGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],  
     });
+    
 
 
  module.exports = mongoose.model("User", userSchema);   

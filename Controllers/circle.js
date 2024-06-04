@@ -4,6 +4,8 @@ const userModel = require('../Models/user');
 const { invite } = require('../Utils/invite');
 const { uploadImage } = require('../Utils/upload');
 const convosModel = require('../Models/convos');
+const { eventTypeModel } = require('../Models/plan');
+const mongoose = require('mongoose');
 
 /**
  * @description Create a new circle
@@ -12,6 +14,8 @@ const convosModel = require('../Models/convos');
  */
 
 module.exports.createCircle = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   const { error } = circleSchema.validate(req.body, { abortEarly: false });
   if (error) {
     return res.status(400).json({ error: error.message });
@@ -42,7 +46,7 @@ module.exports.createCircle = async (req, res) => {
       if (!user) {
         // Create a new user if not found
         user = new userModel({ phoneNumber });
-        await user.save();
+        await user.save({ session });
       }
       // Add user to the circle members array
       if (!circle.members.includes(user._id)) {
@@ -55,39 +59,59 @@ module.exports.createCircle = async (req, res) => {
       await invite([phoneNumber], message);
     });
 
-    // Execute all invite operations
     await Promise.all(invitePromises);
 
     //now create the convos and add to the circle with empty pinned messages
-    const convos = new convosModel({ pinnedMessages: [] }); 
-    await convos.save();
+    const convos = new convosModel({ pinnedMessages: [] });
+    await convos.save({ session });
     circle.convos = convos._id;
 
-    // Save the circle to the database
-    await circle.save();
+    //create default event types for the circle ("Hangout - green", "Meeting - orange", "Trip Plan - blue")
+    const eventTypes = [
+      { name: "Hangout", color: "green" },
+      { name: "Meeting", color: "orange" },
+      { name: "Trip Plan", color: "blue" },
+    ];
 
-    // Update all members to include this circle in their memberGroups
+    const eventTypesPromises = eventTypes.map(async (eventType) => {
+      let existingEventType = await eventTypeModel.findOne({ name: eventType.name, color: eventType.color });
+      let newEventType;
+      if (!existingEventType) {
+        newEventType = new eventTypeModel(eventType);
+        await newEventType.save({ session });
+      } else {
+        newEventType = existingEventType;
+      }
+      // Add the event type to the circle
+      circle.events.push(newEventType._id);
+    });
+
+    await Promise.all(eventTypesPromises);
+    await circle.save({ session }); // Save the circle after all event types have been handled
+
     await userModel.updateMany(
       { _id: { $in: circle.members } },
-      { $addToSet: { memberGroups: circle._id } }
+      { $addToSet: { memberGroups: circle._id } },
+      { session }
     );
 
-    // Update the owner's ownedGroups separately
-    await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } });
+    await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } }, { session });
 
-
-
-
-    res.status(201).json({
+    await session.commitTransaction();
+    session.endSession();
+    return res.status(201).json({
       success: true,
       message: 'Circle created successfully, and invitations sent.',
       circle,
     });
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error('Error creating circle:', error);
     res.status(500).json({ error: 'Failed to create circle' });
   }
 };
+
 
 /**
  * @description Get the members of a circle
