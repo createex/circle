@@ -5,7 +5,8 @@ const{
     createPlan,
     getPlans,
     getEventTypes,
-    createEventType
+    createEventType,
+    deletePlan
 
 } = require('../Controllers/plan');
 
@@ -18,5 +19,6 @@ router.post('/create/:circleId', createPlan)
 router.get('/get/:circleId', getPlans)
 router.get('/event-types/:circleId', getEventTypes)
 router.post('/event-types/create/:circleId', createEventType)
+router.delete('/delete/:circleId/:planId', deletePlan)
 
 module.exports = router;

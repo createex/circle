@@ -12,7 +12,8 @@ const {
     updateProfilePicture,
     invite,
     resendCode,
-    checkUsersByPhoneNumbers
+    checkUsersByPhoneNumbers,
+    getProfile
 } = require("../Controllers/auth");
 
 //Middlewares
@@ -33,5 +34,6 @@ router.use(customerMiddleware);
 router.post("/invite", invite);
 router.post("/check-users", checkUsersByPhoneNumbers);
 router.post("/update-profile-picture", upload.single('profilePicture'), updateProfilePicture);
+router.get("/profile", getProfile);
 
 module.exports = router;

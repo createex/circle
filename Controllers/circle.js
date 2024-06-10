@@ -144,6 +144,50 @@ module.exports.getCircleMembers = async (req, res) => {
 }
 
 /**
+ * @description Remove a member from a circle
+ * @route DELETE /circle/remove-member/:circleId/:memberId
+ * @access Private
+ */
+
+module.exports.removeCircleMember = async (req, res) => {
+  const { circleId, memberId } = req.params;
+
+  try {
+    const circle = await circleModel.findById(circleId);
+    if (!circle) {
+      return res.status(404).json({ error: 'Circle not found' });
+    }
+
+    if (circle.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Only the circle owner can remove members' });
+    }
+
+    if (memberId === circle.owner.toString()) {
+      return res.status(400).json({ error: 'Owner cannot be removed from the circle' });
+    }
+    
+    if (circle.members.includes(memberId)) {
+      circle.members.pull(memberId);
+      await circle.save();
+      await userModel.findByIdAndUpdate(memberId, { $pull: { memberGroups: circleId } });
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Member removed successfully',
+      });
+
+    } else {
+      return res.status(404).json({ error: 'Member not part of the circle' });
+    }
+
+  } catch (error) {
+    console.error('Error removing member:', error);
+    res.status(500).json({ error: 'Failed to remove member' });
+  }
+}
+
+
+/**
  * @description Get all circles (image, name, description and id only. Also sort by most recent)
  * @route GET /circle/all
  * @access Private

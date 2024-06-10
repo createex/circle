@@ -122,7 +122,7 @@ module.exports.createEventType = async (req, res) => {
 }
 
 /**
- * @description Get plans for a circle (populated with event type)
+ * @description Get plans for a circle (populated with event type and members)
  * @route GET /plan/get/:circleId
  * @access Private
  */
@@ -134,24 +134,77 @@ module.exports.getPlans = async (req, res) => {
     }
 
     try {
-        const circle = await circleModel.findById(circleId).populate({
-            path: 'plans',
-            populate: {
-                path: 'eventType',
-                model: 'EventType'
-            }
-        });
+        const circle = await circleModel.findById(circleId)
+            .populate({
+                path: 'plans',
+                populate: {
+                    path: 'eventType',
+                    model: 'EventType'
+                }
+            })
+            .populate({
+                path: 'members',
+                model: 'User',
+                select: 'name email profilePicture _id'  
+            });
+
         if (!circle) {
             return res.status(404).json({ error: 'Circle not found' });
         }
+
         res.status(200).json({
             success: true,
-            message: 'Plans retrieved successfully',
+            message: 'Plans and members retrieved successfully',
             plans: circle.plans,
+            members: circle.members  // Including members in the response
         });
 
     } catch (error) {
         console.error('Error getting plans:', error);
         res.status(500).json({ error: 'Failed to get plans' });
+    }
+}
+
+
+/**
+ * @description Delete a plan from a circle - only the creator of the plan can delete it
+ * @route DELETE /plan/delete/:circleId/:planId
+ * @access Private
+ */
+
+module.exports.deletePlan = async (req, res) => {
+    const { circleId, planId } = req.params;
+
+    try {
+        const plan = await planModel.findById(planId);
+        if (!plan) {
+            return res.status(404).json({ error: 'Plan not found' });
+        }
+
+        // Check if the logged-in user is the creator of the plan
+        if (plan.createdBy.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ error: 'Unauthorized to delete this plan' });
+        }
+
+        // Check if the plan is part of the specified circle
+        const circle = await circleModel.findById(circleId);
+        if (!circle) {
+            return res.status(404).json({ error: 'Circle not found' });
+        }
+
+        if (!circle.plans.includes(plan._id)) {
+            return res.status(404).json({ error: 'Plan not part of the circle' });
+        }
+
+        // Remove the plan from the circle
+        circle.plans.pull(plan._id);
+        await circle.save();
+
+        // Delete the plan
+        await planModel.findByIdAndDelete(planId);
+
+        res.status(200).json({ message: 'Plan deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
 }

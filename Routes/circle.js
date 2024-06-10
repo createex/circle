@@ -7,7 +7,8 @@ const {
     createCircle,
     updateCirlceImage,
     getCircleMembers,
-    getAllCircles
+    getAllCircles,
+    removeCircleMember
 } = require('./../Controllers/circle')
 
 //Middlewares
@@ -19,6 +20,7 @@ router.post('/create', createCircle)
 router.post('/upload-image', upload.single('circle-image'), updateCirlceImage)
 router.get('/members/:circleId', getCircleMembers)
 router.get('/all', getAllCircles)
+router.delete('/remove-member/:circleId/:memberId', removeCircleMember)
 
 module.exports = router;
 

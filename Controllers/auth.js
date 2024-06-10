@@ -4,7 +4,7 @@ const { userSignupSchema } = require('../Schemas/user');
 const generateToken = require('../Utils/generateToken');
 const { get6DigitCode } = require('../Utils/methods');
 const { sendVerificationSMS, sendInviteLinks } = require('../Utils/sms');
-const {uploadImage} = require('../Utils/upload');
+const { uploadImage } = require('../Utils/upload');
 
 /**
  * @description Register a new user
@@ -80,7 +80,7 @@ module.exports.signup = async (req, res) => {
 module.exports.resendCode = async (req, res) => {
     try {
         // Find the user by phone number
-        const user = await userModel .findOne({ phoneNumber: req.body.phoneNumber });
+        const user = await userModel.findOne({ phoneNumber: req.body.phoneNumber });
         if (!user) {
             return res.status(404).json({ error: 'User not found' });
         }
@@ -287,16 +287,16 @@ module.exports.updateProfilePicture = async (req, res) => {
 
 module.exports.invite = async (req, res) => {
     try {
-      const { phoneNumbers, message } = req.body;
-      await sendInviteLinks(phoneNumbers, message);
-      res.status(200).json({
-        success: true,
-        message: 'Invitation link sent successfully',
-      });
+        const { phoneNumbers, message } = req.body;
+        await sendInviteLinks(phoneNumbers, message);
+        res.status(200).json({
+            success: true,
+            message: 'Invitation link sent successfully',
+        });
     } catch (error) {
-      res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
-  };
+};
 
 /**
  * @description Check if users exist by phone numbers and return their details
@@ -307,55 +307,86 @@ module.exports.invite = async (req, res) => {
 
 module.exports.checkUsersByPhoneNumbers = async (req, res) => {
     try {
-      const { phoneNumbers } = req.body;
-  
-      if (!Array.isArray(phoneNumbers)) {
-        return res.status(400).json({ error: 'phoneNumbers should be an array' });
-      }
-  
-      // Initialize an array to hold the results
-      const results = [];
-  
-      // Iterate through the phone numbers
-      for (const phoneNumber of phoneNumbers) {
-        const user = await userModel.findOne({ phoneNumber });
-  
-        if (user) {
-          if (user.email) {
-            // User exists and is fully registered
-            results.push({
-              phoneNumber,
-              userId: user._id,
-              profilePicture: user.profilePicture,
-              isUser: true
-            });
-          } else {
-            // User exists but is only invited (no email means they haven't completed registration)
-            results.push({
-              phoneNumber,
-              userId: user._id,
-              profilePicture: user.profilePicture,
-              isUser: false
-            });
-          }
-        } else {
-          // User does not exist
-          results.push({
-            phoneNumber,
-            isUser: false
-          });
-        }
-      }
-  
-      // Send the response
-      res.status(200).json(results);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  };
-  
+        const { phoneNumbers } = req.body;
 
-  
+        if (!Array.isArray(phoneNumbers)) {
+            return res.status(400).json({ error: 'phoneNumbers should be an array' });
+        }
+
+        // Initialize an array to hold the results
+        const results = [];
+
+        // Iterate through the phone numbers
+        for (const phoneNumber of phoneNumbers) {
+            const user = await userModel.findOne({ phoneNumber });
+
+            if (user) {
+                if (user.email) {
+                    // User exists and is fully registered
+                    results.push({
+                        phoneNumber,
+                        userId: user._id,
+                        profilePicture: user.profilePicture,
+                        isUser: true
+                    });
+                } else {
+                    // User exists but is only invited (no email means they haven't completed registration)
+                    results.push({
+                        phoneNumber,
+                        userId: user._id,
+                        profilePicture: user.profilePicture,
+                        isUser: false
+                    });
+                }
+            } else {
+                // User does not exist
+                results.push({
+                    phoneNumber,
+                    isUser: false
+                });
+            }
+        }
+
+        // Send the response
+        res.status(200).json(results);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
+/**
+ * @description Get own details (profile) of the logged in user
+ * @route GET /auth/profile
+ * @access Private
+ */
+
+/**
+ * @description Get own details (profile) of the logged in user
+ * @route GET /auth/profile
+ * @access Private
+ */
+
+module.exports.getProfile = async (req, res) => {
+    try {
+        const user = await userModel.findById(req.user._id)
+            .select('name email phoneNumber profilePicture _id');
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        res.status(200).json({
+            success: true,
+            data: user,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
+
+
+
+
+
 
 
 
