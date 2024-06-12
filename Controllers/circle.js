@@ -144,6 +144,46 @@ module.exports.getCircleMembers = async (req, res) => {
 }
 
 /**
+ * @description Add a members to a circle
+ * @route POST /circle/add-member/:circleId
+ * @access Private
+ */
+
+module.exports.addCircleMember = async (req, res) => {
+  const { circleId } = req.params;
+  const { memberId } = req.body;
+
+  try {
+    const circle = await circleModel.findById(circleId);
+    if (!circle) {
+      return res.status(404).json({ error: 'Circle not found' });
+    }
+
+    if (circle.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Only the circle owner can add members' });
+    }
+
+    if (circle.members.includes(memberId)) {
+      return res.status(400).json({ error: 'Member is already part of the circle' });
+    }
+
+    circle.members.push(memberId);
+    await circle.save();
+    await userModel.findByIdAndUpdate(memberId, { $addToSet: { memberGroups: circleId } });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Member added successfully',
+    });
+
+  } catch (error) {
+    console.error('Error adding member:', error);
+    res.status(500).json({ error: 'Failed to add member' });
+  }
+}
+
+
+/**
  * @description Remove a member from a circle
  * @route DELETE /circle/remove-member/:circleId/:memberId
  * @access Private
@@ -188,14 +228,20 @@ module.exports.removeCircleMember = async (req, res) => {
 
 
 /**
- * @description Get all circles (image, name, description and id only. Also sort by most recent)
+ * @description Get all circles (in which user is member) (image, name, description and id only. Also sort by most recent)
  * @route GET /circle/all
  * @access Private
  */
 
+
+
 module.exports.getAllCircles = async (req, res) => {
+
   try {
-    const circles = await circleModel.find({}, 'circleName circleImage description').sort({ createdAt: -1 });
+    const circles = await circleModel.find({ members: req.user._id })
+      .select('circleName circleImage description')
+      .sort({ createdAt: -1 });
+
     res.status(200).json({
       success: true,
       message: 'Circles retrieved successfully',
@@ -205,6 +251,73 @@ module.exports.getAllCircles = async (req, res) => {
     console.error('Error getting circles:', error);
     res.status(500).json({ error: 'Failed to get circles' });
   }
+}
+
+/**
+ * @description Get a circle by ID
+ * @route GET /circle/:circleId
+ * @access Private
+ */
+
+module.exports.getCircleById = async (req, res) => {
+  const circleId = req.params.circleId;
+
+  try {
+    const circle = await circleModel.findById(circleId);
+    if (!circle) {
+      return res.status(404).json({ error: 'Circle not found' });
+    }
+
+    //check if user is a member of the circle
+    if (!circle.members.includes(req.user._id)) {
+      return res.status(403).json({ error: 'You are not a member of this circle' });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Circle retrieved successfully',
+      circle,
+    });
+  } catch (error) {
+    console.error('Error getting circle:', error);
+    res.status(500).json({ error: 'Failed to get circle' });
+  }
+}
+
+/**
+ * @description Update a circl by ID (name only)
+ * @route PUT /circle/:circleId
+ * @access Private
+ */
+
+module.exports.updateCircle = async (req, res) => {
+  const circleId = req.params.circleId;
+  const { circleName } = req.body;
+
+  try {
+    const circle = await circleModel.findById(circleId);
+    if (!circle) {
+      return res.status(404).json({ error: 'Circle not found' });
+    }
+
+    if (circle.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Only the circle owner can update the circle' });
+    }
+
+    circle.circleName = circleName;
+    await circle.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Circle updated successfully',
+      circle,
+    });
+  }
+  catch (error) {
+    console.error('Error updating circle:', error);
+    res.status(500).json({ error: 'Failed to update circle' });
+  }
+  
 }
 
 /**
