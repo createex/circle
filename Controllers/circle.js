@@ -182,6 +182,44 @@ module.exports.addCircleMember = async (req, res) => {
   }
 }
 
+/**
+ * @description Add multiple members to a circle
+ * @route POST /circle/add-members/:circleId
+ * @access Private
+ */
+
+module.exports.addCircleMembers = async (req, res) => {
+  const { circleId } = req.params;
+  const { memberIds } = req.body;
+
+  try {
+    const circle = await circleModel.findById(circleId);
+    if (!circle) {
+      return res.status(404).json({ error: 'Circle not found' });
+    }
+
+    if (circle.owner.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Only the circle owner can add members' });
+    }
+
+    const newMembers = memberIds.filter(memberId => !circle.members.includes(memberId));
+    circle.members.push(...newMembers);
+    await circle.save();
+    await userModel.updateMany(
+      { _id: { $in: newMembers } },
+      { $addToSet: { memberGroups: circleId } }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Members added successfully',
+    });
+
+  } catch (error) {
+    console.error('Error adding members:', error);
+    res.status(500).json({ error: 'Failed to add members' });
+  }
+}
 
 /**
  * @description Remove a member from a circle

@@ -11,7 +11,8 @@ const {
     removeCircleMember,
     updateCircle,
     getCircleById,
-    addCircleMember
+    addCircleMember,
+    addCircleMembers
 
 } = require('./../Controllers/circle')
 
@@ -28,6 +29,7 @@ router.delete('/remove-member/:circleId/:memberId', removeCircleMember)
 router.put('/update/:circleId', updateCircle)
 router.get('/get-circle/:circleId', getCircleById)
 router.post('/add-member/:circleId', addCircleMember)
+router.post('/add-members/:circleId', addCircleMembers)
 
 
 module.exports = router;
