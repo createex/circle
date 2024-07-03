@@ -34,6 +34,15 @@ const planSchema = new mongoose.Schema({
         ref: 'EventType',
         required: true
     },
+    members: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    }],
+    budget: {
+        type: Number,
+        required: false
+    },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',

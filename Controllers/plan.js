@@ -10,10 +10,10 @@ const circleModel = require('../Models/circle');
  */
 
 module.exports.createPlan = async (req, res) => {
-    const { name, description, date, location, eventType } = req.body;
+    const { name, description, date, location, eventType, members, budget } = req.body;
     const circleId = req.params.circleId;
 
-    if(!name || !date || !location || !eventType || !circleId) {
+    if(!name || !date || !location || !eventType || !circleId || !members || !budget) {
         return res.status(400).json({ error: 'Please provide all required fields' });
     }
     try {
@@ -33,6 +33,8 @@ module.exports.createPlan = async (req, res) => {
             date,
             location,
             eventType,
+            members,
+            budget,
             createdBy: req.user._id
         });
 
