@@ -11,8 +11,8 @@ const circleSchema = new mongoose.Schema({
     convos: { type: mongoose.Schema.Types.ObjectId, ref: 'Convos' },
     experiences: { type: mongoose.Schema.Types.ObjectId, ref: 'Experience' },
     todos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Todo' }],
-    plans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Plan' }],
-    events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventType' }],
+    //plans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Plan' }],
+    //events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventType' }],
     
 },
 

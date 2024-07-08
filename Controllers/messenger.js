@@ -51,8 +51,6 @@ module.exports.sendMessage = async (req, res) => {
  * @access Private
  */
 
-
-
 module.exports.getMessages = async (req, res) => {
     try {
         const { circleId } = req.params;
@@ -70,12 +68,14 @@ module.exports.getMessages = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to view messages in this circle' });
         }
 
+        // Fetch messages and conditionally populate plan details if the type is 'plan'
         const messages = await messageModel.find({ circleId: circleId })
+            .populate('sender', 'name profilePicture _id')
             .populate({
-                path: 'sender',
-                select: 'name profilePicture _id'  // Only fetch the name and profile picture from the User collection
+                path: 'planId',
+                populate: [{ path: 'eventType' }, { path: 'members', select: 'name email profilePicture _id' }]
             })
-            .sort({ createdAt: -1 })  // Sorting messages by creation time, newest first
+            .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
             .exec();
@@ -83,20 +83,39 @@ module.exports.getMessages = async (req, res) => {
         // Count total messages for pagination metadata
         const totalMessages = await messageModel.countDocuments({ circleId: circleId });
 
-        // Map over messages to customize the output, including media details
-        const result = messages.map(message => ({
-            id: message._id,
-            senderId: message.sender._id,
-            text: message.message,
-            senderName: message.sender.name,
-            senderProfilePicture: message.sender.profilePicture,
-            sentAt: message.createdAt,
-            media: message.media.map(m => ({
-                type: m.type,
-                url: m.url,
-                mimetype: m.mimetype
-            }))
-        }));
+        // Map over messages to customize the output, including plan details if type is 'plan'
+        const result = messages.map(message => {
+            const messageData = {
+                id: message._id,
+                type: message.type,
+                senderId: message.sender._id,
+                text: message.message,
+                senderName: message.sender.name,
+                senderProfilePicture: message.sender.profilePicture,
+                sentAt: message.createdAt,
+                media: message.media.map(m => ({
+                    type: m.type,
+                    url: m.url,
+                    mimetype: m.mimetype
+                }))
+            };
+
+            if (message.type === 'plan' && message.planId) {
+                messageData.planDetails = {
+                    planId: message.planId._id,
+                    name: message.planId.name,
+                    description: message.planId.description,
+                    date: message.planId.date,
+                    location: message.planId.location,
+                    eventType: message.planId.eventType,
+                    members: message.planId.members,
+                    budget: message.planId.budget,
+                    createdBy: message.planId.createdBy
+                };
+            }
+
+            return messageData;
+        });
 
         res.status(200).json({
             success: true,

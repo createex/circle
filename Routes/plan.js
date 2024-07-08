@@ -15,10 +15,10 @@ const { customerMiddleware } = require("../Middlewares/user");
 
 //Routes
 router.use(customerMiddleware)
-router.post('/create/:circleId', createPlan)
-router.get('/get/:circleId', getPlans)
-router.get('/event-types/:circleId', getEventTypes)
-router.post('/event-types/create/:circleId', createEventType)
-router.delete('/delete/:circleId/:planId', deletePlan)
+router.post('/create', createPlan)
+router.get('/get', getPlans)
+router.get('/event-types', getEventTypes)
+router.post('/event-types/create', createEventType)
+router.delete('/delete/:planId', deletePlan)
 
 module.exports = router;

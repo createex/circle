@@ -1,31 +1,26 @@
 const {planModel, eventTypeModel} = require('../Models/plan');
+const userModel = require('../Models/user');
 const circleModel = require('../Models/circle');
 
 
 
 /**
  * @description Create a plan for a circle by the user  
- * @route POST /plan/create/:circleId
+ * @route POST /plan/create
  * @access Private
  */
 
 module.exports.createPlan = async (req, res) => {
     const { name, description, date, location, eventType, members, budget } = req.body;
-    const circleId = req.params.circleId;
 
-    if(!name || !date || !location || !eventType || !circleId || !members || !budget) {
+
+    if(!name || !date || !location || !eventType  || !members || !budget) {
         return res.status(400).json({ error: 'Please provide all required fields' });
     }
     try {
-        const circle = await circleModel.findById(circleId);
-        if(!circle) {
-            return res.status(404).json({ error: 'Circle not found' });
-        }
 
-        //check if the event type exist in the circle
-        if(!circle.events.includes(eventType)) {
-            return res.status(400).json({ error: 'Event type does not exist in the circle' });
-        }
+
+
         
         const plan = new planModel({
             name,
@@ -41,9 +36,8 @@ module.exports.createPlan = async (req, res) => {
         await plan.save();
 
         // Add the plan to the circle's plan list
-        circle.plans.push(plan._id);
-        await circle.save();
-
+        req.user.plans.push(plan._id);
+        await req.user.save();
         res.status(201).json({ message: 'Plan created successfully', plan });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -52,53 +46,37 @@ module.exports.createPlan = async (req, res) => {
 
 /**
  * @description Get event types of a circle
- * @route GET /plan/event-types/:circleId
+ * @route GET /plan/event-types
  * @access Private
  */
 
 module.exports.getEventTypes = async (req, res) => {
-    const circleId = req.params.circleId;
-    if (!circleId) {
-        return res.status(400).json({ error: 'Circle ID is required' });
-    }
 
-    try {
-        const circle = await circleModel.findById(circleId).populate('events');
-        if (!circle) {
-            return res.status(404).json({ error: 'Circle not found' });
-        }
+    // Get the event types of the user, populate the eventType field in user 
+    const user= await userModel.findById(req.user._id).populate('events');
+
+
         res.status(200).json({
             success: true,
             message: 'Event types retrieved successfully',
-            eventTypes: circle.events,
+            eventTypes: user.events
         });
-
-    } catch (error) {
-        console.error('Error getting event types:', error);
-        res.status(500).json({ error: 'Failed to get event types' });
-    }
 }
 
 /**
  * @description Create an event type for a circle and push it to the circle's event types list
- * @route POST /plan/event-types/create/:circleId
+ * @route POST /plan/event-types/create
  * @access Private
  */
 
 module.exports.createEventType = async (req, res) => {
     const { name, color } = req.body;
-    const circleId = req.params.circleId;
-
-    if(!name || !color || !circleId) {
+    if(!name || !color ) {
         return res.status(400).json({ error: 'Please provide all required fields' });
     }
 
     try {
-        const circle = await circleModel.findById(circleId);
-        if(!circle) {
-            return res.status(404).json({ error: 'Circle not found' });
-        }
-
+   
         /*
         check if the event type  and its corresponding color already exists if yes then just 
         add  the id to the circle otherwise create a new event type and add it to the circle
@@ -113,8 +91,11 @@ module.exports.createEventType = async (req, res) => {
             await eventType.save();
         }
 
-        circle.events.push(eventType._id);
-        await circle.save();
+        // Add the event type to the user events list
+        req.user.events.push(eventType._id);
+        await req.user.save();
+
+
         
         res.status(201).json({ message: 'Event type created successfully', eventType });
     } catch (error) {
@@ -125,42 +106,33 @@ module.exports.createEventType = async (req, res) => {
 
 /**
  * @description Get plans for a circle (populated with event type and members)
- * @route GET /plan/get/:circleId
+ * @route GET /plan/get
  * @access Private
  */
 
 module.exports.getPlans = async (req, res) => {
-    const circleId = req.params.circleId;
-    if (!circleId) {
-        return res.status(400).json({ error: 'Circle ID is required' });
-    }
-
     try {
-        const circle = await circleModel.findById(circleId)
+        const user = await userModel.findById(req.user._id)
             .populate({
                 path: 'plans',
-                populate: {
-                    path: 'eventType',
-                    model: 'EventType'
-                }
-            })
-            .populate({
-                path: 'members',
-                model: 'User',
-                select: 'name email profilePicture _id'  
+                populate: [
+                    {
+                        path: 'eventType',
+                        model: 'EventType'
+                    },
+                    {
+                        path: 'members',
+                        model: 'User',
+                        select: 'name email profilePicture _id'
+                    }
+                ]
             });
-
-        if (!circle) {
-            return res.status(404).json({ error: 'Circle not found' });
-        }
 
         res.status(200).json({
             success: true,
             message: 'Plans and members retrieved successfully',
-            plans: circle.plans,
-            members: circle.members  // Including members in the response
+            plans: user.plans
         });
-
     } catch (error) {
         console.error('Error getting plans:', error);
         res.status(500).json({ error: 'Failed to get plans' });
@@ -168,14 +140,15 @@ module.exports.getPlans = async (req, res) => {
 }
 
 
+
 /**
  * @description Delete a plan from a circle - only the creator of the plan can delete it
- * @route DELETE /plan/delete/:circleId/:planId
+ * @route DELETE /plan/delete/:planId
  * @access Private
  */
 
 module.exports.deletePlan = async (req, res) => {
-    const { circleId, planId } = req.params;
+    const { planId } = req.params;
 
     try {
         const plan = await planModel.findById(planId);
@@ -188,22 +161,14 @@ module.exports.deletePlan = async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized to delete this plan' });
         }
 
-        // Check if the plan is part of the specified circle
-        const circle = await circleModel.findById(circleId);
-        if (!circle) {
-            return res.status(404).json({ error: 'Circle not found' });
-        }
 
-        if (!circle.plans.includes(plan._id)) {
-            return res.status(404).json({ error: 'Plan not part of the circle' });
-        }
 
-        // Remove the plan from the circle
-        circle.plans.pull(plan._id);
-        await circle.save();
+        // Delete the plan from the user's plans list
 
-        // Delete the plan
+        req.user.plans = req.user.plans.filter(p => p.toString() !== planId);
+        await req.user.save();
         await planModel.findByIdAndDelete(planId);
+        
 
         res.status(200).json({ message: 'Plan deleted successfully' });
     } catch (error) {

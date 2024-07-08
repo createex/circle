@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema({
     itineraries: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Itinerary' }], 
     ownedGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],
     memberGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],  
+    events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventType' }],
+    plans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Plan' }],
     });
     
 

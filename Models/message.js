@@ -8,6 +8,8 @@ const mediaSchema = new mongoose.Schema({
 
 const messageSchema = new mongoose.Schema({
     message: { type: String, default: '' },
+    type: { type: String, default: 'text' },
+    planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' },
     sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     circleId: { type: mongoose.Schema.Types.ObjectId, ref: 'circle' },
     media: [mediaSchema]  
