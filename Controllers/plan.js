@@ -105,41 +105,47 @@ module.exports.createEventType = async (req, res) => {
 }
 
 /**
- * @description Get plans for a circle (populated with event type and members)
- * @route GET /plan/get
+ * @description Get plans for a circle (populated with event type and members) on a specific date
+ * @route GET /plan/getByDate
  * @access Private
  */
+module.exports.getPlansByDate = async (req, res) => {
+    const { date } = req.query; // Extracting date from query parameters
 
-module.exports.getPlans = async (req, res) => {
+    // Validate date input
+    if (!date) {
+        return res.status(400).json({ message: "Date is required" });
+    }
+
+    // Construct the date range for the whole day
+    const targetDate = new Date(date);
+    const nextDay = new Date(targetDate);
+    nextDay.setDate(targetDate.getDate() + 1);
+
+    const query = {
+        date: {
+            $gte: targetDate,
+            $lt: nextDay
+        },
+        createdBy: req.user._id 
+    };
+
     try {
-        const user = await userModel.findById(req.user._id)
-            .populate({
-                path: 'plans',
-                populate: [
-                    {
-                        path: 'eventType',
-                        model: 'EventType'
-                    },
-                    {
-                        path: 'members',
-                        model: 'User',
-                        select: 'name email profilePicture _id'
-                    }
-                ]
-            });
+        const plans = await planModel.find(query)
+            .populate('eventType', 'name color')
+            .populate('members', 'name email profilePicture _id')
+            .exec(); // Execute the query
 
         res.status(200).json({
             success: true,
-            message: 'Plans and members retrieved successfully',
-            plans: user.plans
+            message: 'Plans for the specified date retrieved successfully',
+            plans
         });
     } catch (error) {
         console.error('Error getting plans:', error);
-        res.status(500).json({ error: 'Failed to get plans' });
+        res.status(500).json({ message: 'Failed to get plans', error });
     }
-}
-
-
+};
 
 /**
  * @description Delete a plan from a circle - only the creator of the plan can delete it
