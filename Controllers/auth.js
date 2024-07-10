@@ -383,6 +383,28 @@ module.exports.getProfile = async (req, res) => {
     }
 }
 
+/**
+ * @description Get all members
+ * @route GET /auth/members
+ * @access Private
+ */
+
+module.exports.getMembers = async (req, res) => {
+    try {
+        const members = await userModel.find()
+            .select('name email phoneNumber profilePicture _id');
+        if (!members) {
+            return res.status(404).json({ error: 'Members not found' });
+        }
+        res.status(200).json({
+            success: true,
+            data: members,
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+}
 
 
 

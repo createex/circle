@@ -13,7 +13,8 @@ const {
     invite,
     resendCode,
     checkUsersByPhoneNumbers,
-    getProfile
+    getProfile,
+    getMembers
 } = require("../Controllers/auth");
 
 //Middlewares
@@ -35,5 +36,7 @@ router.post("/invite", invite);
 router.post("/check-users", checkUsersByPhoneNumbers);
 router.post("/update-profile-picture", upload.single('profilePicture'), updateProfilePicture);
 router.get("/profile", getProfile);
+router.get("/members", getMembers);
+
 
 module.exports = router;
