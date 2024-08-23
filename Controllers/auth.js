@@ -60,7 +60,11 @@ module.exports.signup = async (req, res) => {
         await user.save();
 
         // Send the verification code via SMS
-        await sendVerificationSMS(phoneNumber, verificationCode);
+        const codeSent=await sendVerificationSMS(phoneNumber, verificationCode);
+        
+        if(!codeSent){
+            return res.status(500).json({ error: 'Error sending verification code' });
+        }
 
         res.status(201).json({
             success: true,

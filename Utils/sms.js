@@ -1,4 +1,6 @@
+
 const twilio = require('twilio');
+require("dotenv").config;
 
 // Initialize Twilio client
 const client = new twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
@@ -13,7 +15,7 @@ module.exports.sendVerificationSMS = async (phoneNumber, code) => {
 
     console.log(message.sid);
   } catch (error) {
-    console.error(error);
+    console.error(error, error.message);
   }
 };
 

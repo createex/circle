@@ -16,8 +16,13 @@ const mongoose = require('mongoose');
 module.exports.createCircle = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+  
+  console.log('Received request to create circle:', req.body);
+  console.log('Requesting user ID:', req.user._id);
+
   const { error } = circleSchema.validate(req.body, { abortEarly: false });
   if (error) {
+    console.error('Validation error:', error.details);
     return res.status(400).json({ error: error.message });
   }
 
@@ -25,9 +30,11 @@ module.exports.createCircle = async (req, res) => {
   const ownerId = req.user._id;
 
   try {
-    // Ensure the owner is added as a member if not already included
+    console.log('Starting transaction for circle creation');
+
     if (!memberIds.includes(ownerId)) {
       memberIds.push(ownerId);
+      console.log('Owner added to members:', ownerId);
     }
 
     const circle = new circleModel({
@@ -38,35 +45,36 @@ module.exports.createCircle = async (req, res) => {
       interest,
       members: memberIds,
       owner: ownerId,
+      events: [],
     });
 
-    // Handle invitations and addition of users via phone number
+    console.log('Creating circle with details:', circle);
+
     const invitePromises = phoneNumbers.map(async (phoneNumber) => {
       let user = await userModel.findOne({ phoneNumber });
       if (!user) {
-        // Create a new user if not found
         user = new userModel({ phoneNumber });
         await user.save({ session });
+        console.log(`New user created for phone number: ${phoneNumber}`);
       }
-      // Add user to the circle members array
       if (!circle.members.includes(user._id)) {
         circle.members.push(user._id);
       }
 
-      // Construct and send the invitation link
       const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
       const message = `${req.user.name} has invited you to join the circle on App. Register here: ${inviteLink}`;
       await invite([phoneNumber], message);
+      console.log(`Invitation sent to ${phoneNumber}`);
     });
 
     await Promise.all(invitePromises);
+    console.log('All invitations processed successfully');
 
-    //now create the convos and add to the circle with empty pinned messages
     const convos = new convosModel({ pinnedMessages: [] });
     await convos.save({ session });
     circle.convos = convos._id;
+    console.log('Created new conversation for the circle');
 
-    //create default event types for the circle ("Hangout - green", "Meeting - orange", "Trip Plan - blue")
     const eventTypes = [
       { name: "Hangout", color: "green" },
       { name: "Meeting", color: "orange" },
@@ -79,26 +87,31 @@ module.exports.createCircle = async (req, res) => {
       if (!existingEventType) {
         newEventType = new eventTypeModel(eventType);
         await newEventType.save({ session });
+        console.log(`New event type created: ${eventType.name}`);
       } else {
         newEventType = existingEventType;
+        console.log(`Existing event type found: ${eventType.name}`);
       }
-      // Add the event type to the circle
       circle.events.push(newEventType._id);
     });
 
     await Promise.all(eventTypesPromises);
-    await circle.save({ session }); // Save the circle after all event types have been handled
+    await circle.save({ session });
+    console.log('Circle saved successfully:', circle);
 
     await userModel.updateMany(
       { _id: { $in: circle.members } },
       { $addToSet: { memberGroups: circle._id } },
       { session }
     );
+    console.log('Updated user memberGroups for circle:', circle._id);
 
     await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } }, { session });
+    console.log('Updated owner with ownedGroups:', ownerId);
 
     await session.commitTransaction();
     session.endSession();
+    console.log('Transaction committed successfully');
     return res.status(201).json({
       success: true,
       message: 'Circle created successfully, and invitations sent.',
