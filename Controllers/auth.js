@@ -387,6 +387,37 @@ module.exports.getProfile = async (req, res) => {
     }
 }
 
+///edit profile
+module.exports.editProfile = async (req, res) => {
+    const userId = req.user._id; // Assuming you have the user ID from the authenticated user
+    const { name, profilePicture } = req.body;
+  
+    try {
+      // Find the user by ID and update the fields
+      const user = await userModel.findByIdAndUpdate(
+        userId,
+        {
+          name,
+          profilePicture
+        },
+        { new: true, runValidators: true }
+      );
+  
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+  
+      res.status(200).json({
+        success: true,
+        message: 'Profile updated successfully',
+        user
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      res.status(500).json({ error: 'Failed to update profile' });
+    }
+  };
+
 /**
  * @description Get all members
  * @route GET /auth/members

@@ -314,27 +314,56 @@ module.exports.getCircleById = async (req, res) => {
   const circleId = req.params.circleId;
 
   try {
-    const circle = await circleModel.findById(circleId);
+    // Fetch the circle and populate the members' names and profile pictures
+    const circle = await circleModel.findById(circleId)
+      .populate({
+        path: 'members',
+        select: 'name profilePicture', // Specify the fields to populate
+        model: 'User' // Ensure it populates from the User model
+      })
+      .populate({
+        path: 'owner',
+        select: 'name profilePicture', // Optionally populate the owner's name and profile picture
+        model: 'User'
+      });
+
     if (!circle) {
       return res.status(404).json({ error: 'Circle not found' });
     }
 
-    //check if user is a member of the circle
-    if (!circle.members.includes(req.user._id)) {
+    // Check if user is a member of the circle
+    if (!circle.members.some(member => member._id.equals(req.user._id))) {
       return res.status(403).json({ error: 'You are not a member of this circle' });
     }
 
     res.status(200).json({
       success: true,
       message: 'Circle retrieved successfully',
-      circle,
+      circle: {
+        _id: circle._id,
+        circleName: circle.circleName,
+        circleImage: circle.circleImage,
+        description: circle.description,
+        type: circle.type,
+        interest: circle.interest,
+        members: circle.members, // This will now include names and profile pictures
+        owner: {
+          _id: circle.owner._id,
+          name: circle.owner.name,
+          profilePicture: circle.owner.profilePicture
+        },
+        todos: circle.todos,
+        events: circle.events,
+        convos: circle.convos,
+        createdAt: circle.createdAt,
+        updatedAt: circle.updatedAt
+      }
     });
   } catch (error) {
     console.error('Error getting circle:', error);
     res.status(500).json({ error: 'Failed to get circle' });
   }
 }
-
 /**
  * @description Update a circl by ID (name only)
  * @route PUT /circle/:circleId
@@ -343,7 +372,7 @@ module.exports.getCircleById = async (req, res) => {
 
 module.exports.updateCircle = async (req, res) => {
   const circleId = req.params.circleId;
-  const { circleName } = req.body;
+  const { circleName, circleImage } = req.body; // Expecting circleImage in the request body
 
   try {
     const circle = await circleModel.findById(circleId);
@@ -351,26 +380,29 @@ module.exports.updateCircle = async (req, res) => {
       return res.status(404).json({ error: 'Circle not found' });
     }
 
+    // Check if the user is the owner of the circle
     if (circle.owner.toString() !== req.user._id.toString()) {
       return res.status(403).json({ error: 'Only the circle owner can update the circle' });
     }
 
+    // Update circle name and image URL
     circle.circleName = circleName;
-    await circle.save();
-    
+    if (circleImage) {
+      circle.circleImage = circleImage; // Update the profile picture URL if provided
+    }
+
+    await circle.save(); // Save the updated circle
+
     res.status(200).json({
       success: true,
       message: 'Circle updated successfully',
       circle,
     });
-  }
-  catch (error) {
+  } catch (error) {
     console.error('Error updating circle:', error);
     res.status(500).json({ error: 'Failed to update circle' });
   }
-  
 }
-
 /**
  * @description upload cricle image 
  * @route POST /circle/upload-image

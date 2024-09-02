@@ -107,13 +107,18 @@ module.exports.getStoriesForCircle = async (req, res) => {
         // Convert the userStories object into an array format suitable for response
         const result = Object.values(userStories);
 
+        // Prepare the response data including users' information
+        const responseData = result.map(userStory => ({
+            user: userStory.user, // User information
+            stories: userStory.stories // Associated stories
+        }));
+
         res.status(200).json({
             message: 'Stories retrieved successfully',
-            data: result
+            data: responseData
         });
     } catch (error) {
         console.error('Error retrieving stories:', error);
         res.status(500).json({ message: 'Failed to retrieve stories', error: error.toString() });
     }
 };
-

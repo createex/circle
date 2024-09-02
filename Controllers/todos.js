@@ -112,8 +112,9 @@ module.exports.getBill = async (req, res) => {
     if (!req.params.todoId) return res.status(400).json({ error: 'Todo ID is required' });
     try {
         const todo = await todosModel.findById(req.params.todoId)
-            .populate('bill.members', 'name profilePicture')
+            .populate('bill.members', 'name profilePicture') // Populate members with name and profile picture
             .populate('bill.paidBy', 'name profilePicture');
+        
         if (!todo) {
             return res.status(404).json({ error: 'Todo not found' });
         }
@@ -137,6 +138,13 @@ module.exports.getBill = async (req, res) => {
             profilePicture: user.profilePicture
         }));
 
+        // Prepare the total members details
+        const allMembers = todo.bill.members.map(member => ({
+            memberId: member._id,
+            name: member.name,
+            profilePicture: member.profilePicture
+        }));
+
         res.status(200).json({
             success: true,
             message: 'Bill retrieved successfully',
@@ -145,6 +153,8 @@ module.exports.getBill = async (req, res) => {
                 totalPaid,
                 totalPending,
                 payablePerUser: amountPerMember,
+                totalMembers: allMembers.length, // Total members count
+                allMembers, // Include all members with their details
                 pendingUsers,
                 paidUsers,
                 billReceiptImages: todo.bill.images
@@ -156,7 +166,6 @@ module.exports.getBill = async (req, res) => {
         res.status(500).json({ error: 'Failed to get bill' });
     }
 };
-
 /**
  * @description Get all todos within a circle with pagination and member details
  * @route GET /todos/get/:circleId
