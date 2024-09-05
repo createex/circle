@@ -10,14 +10,17 @@ module.exports.sendVerificationSMS = async (phoneNumber, code) => {
     const message = await client.messages.create({
       body: `Thank you for choosing Circle. Use the following OTP to complete your Sign Up procedures: ${code}`,
       from: process.env.TWILIO_PHONE_NUMBER, 
-      to: phoneNumber
+      to: phoneNumber,
     });
 
     console.log(message.sid);
+    return true; // Return true if the message was sent successfully
   } catch (error) {
     console.error(error, error.message);
+    return false; // Return false if there was an error
   }
 };
+
 
 module.exports.sendInviteLinks = async (phoneNumbers, message) => {
   try {
