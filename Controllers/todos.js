@@ -113,12 +113,13 @@ module.exports.getBill = async (req, res) => {
     try {
         const todo = await todosModel.findById(req.params.todoId)
             .populate('bill.members', 'name profilePicture') // Populate members with name and profile picture
-            .populate('bill.paidBy', 'name profilePicture');
+            .populate('bill.paidBy', 'name profilePicture')
+            .populate('description','images');
         
         if (!todo) {
             return res.status(404).json({ error: 'Todo not found' });
         }
-
+        const description=todo.description;
         const totalBillAmount = todo.bill.total;
         const amountPerMember = totalBillAmount / todo.bill.members.length;
         const totalPaid = todo.bill.paidBy.length * amountPerMember;
@@ -157,7 +158,8 @@ module.exports.getBill = async (req, res) => {
                 allMembers, // Include all members with their details
                 pendingUsers,
                 paidUsers,
-                billReceiptImages: todo.bill.images
+                billReceiptImages: todo.bill.images,
+                description
             }
         });
 
