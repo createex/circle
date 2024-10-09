@@ -42,4 +42,3 @@ module.exports.sendInviteLinks = async (phoneNumbers, message) => {
   }
 };
 
-

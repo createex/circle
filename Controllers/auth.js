@@ -5,6 +5,7 @@ const generateToken = require('../Utils/generateToken');
 const { get6DigitCode } = require('../Utils/methods');
 const { sendVerificationSMS, sendInviteLinks } = require('../Utils/sms');
 const { uploadImage } = require('../Utils/upload');
+const inviteModel = require('../Models/invites');
 
 /**
  * @description Register a new user
@@ -441,8 +442,59 @@ module.exports.getMembers = async (req, res) => {
     }
 }
 
+module.exports.checkInvite = async (req, res) => {
+    try {
+        const { phoneNumber } = req.query; // Accept phone number via query parameters
+        
+        if (!phoneNumber) {
+            return res.status(400).json({ error: 'Phone number is required' });
+        }
+
+        // Find all invites for the given phone number
+        const invites = await inviteModel.find({ phoneNumber });
+
+        if (invites.length > 0) {
+            return res.status(200).json({
+                success: true,
+                message: `Found ${invites.length} invite(s) for this phone number`,
+                count: invites.length,
+                invites, 
+            });
+        } else {
+            return res.status(404).json({
+                success: false,
+                message: 'No invite found for this phone number',
+                count: 0,
+            });
+        }
+    } catch (error) {
+        console.error('Error checking invite:', error);
+        res.status(500).json({ error: 'Failed to check invite' });
+    }
+};
 
 
+module.exports.getUserInterests = async (req, res) => {
+    try {
+        const userId = req.user._id;  // Assuming `req.user` is populated by auth middleware
+
+        // Fetch the user from the database
+        const user = await userModel.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        // Send back the user's interests
+        res.status(200).json({
+            success: true,
+            interests: user.interests,  // Assuming interests are stored as an array in the user model
+        });
+    } catch (error) {
+        console.error('Error fetching user interests:', error);
+        res.status(500).json({ error: 'Failed to fetch user interests' });
+    }
+};
 
 
 

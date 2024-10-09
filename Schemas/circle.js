@@ -43,6 +43,9 @@ const circleSchema = joi.object({
     phoneNumbers: joi.array().items(joi.string()).messages({
         'array.base': `"phoneNumbers" should be a type of 'array'`,
     }),
+    interests: joi.array().items(joi.string()).messages({
+        'array.base': `"interests" should be a type of 'array'`,
+    }),
 });
 
 const todoSchema = joi.object({

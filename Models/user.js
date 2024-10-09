@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
     memberGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: "Group" }],  
     events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventType' }],
     plans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Plan' }],
+    interests: [String],
     });
     
 

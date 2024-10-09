@@ -6,6 +6,7 @@ const { uploadImage } = require('../Utils/upload');
 const convosModel = require('../Models/convos');
 const { eventTypeModel } = require('../Models/plan');
 const mongoose = require('mongoose');
+const Invites = require('../Models/invites'); // Assuming you have an invite model
 
 /**
  * @description Create a new circle
@@ -13,118 +14,158 @@ const mongoose = require('mongoose');
  * @access Private
  */
 
+const { inviteUser } = require('../Utils/sms'); // Assuming you have a function to send invites
+
 module.exports.createCircle = async (req, res) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  
-  console.log('Received request to create circle:', req.body);
-  console.log('Requesting user ID:', req.user._id);
+    const session = await mongoose.startSession();
+    session.startTransaction();
 
-  const { error } = circleSchema.validate(req.body, { abortEarly: false });
-  if (error) {
-    console.error('Validation error:', error.details);
-    return res.status(400).json({ error: error.message });
-  }
+    console.log('Received request to create circle:', req.body);
+    console.log('Requesting user ID:', req.user._id);
 
-  const { circleName, circleImage, description, type, interest, memberIds, phoneNumbers } = req.body;
-  const ownerId = req.user._id;
-
-  try {
-    console.log('Starting transaction for circle creation');
-
-    if (!memberIds.includes(ownerId)) {
-      memberIds.push(ownerId);
-      console.log('Owner added to members:', ownerId);
+    // Validate the request payload
+    const { error } = circleSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+        console.error('Validation error:', error.details);
+        return res.status(400).json({ error: error.message });
     }
 
-    const circle = new circleModel({
-      circleName,
-      circleImage,
-      description,
-      type,
-      interest,
-      members: memberIds,
-      owner: ownerId,
-      events: [],
-    });
+    const { circleName, circleImage, description, type, interest, memberIds, phoneNumbers, interests } = req.body;
+    const ownerId = req.user._id;
 
-    console.log('Creating circle with details:', circle);
+    try {
+        console.log('Starting transaction for circle creation');
 
-    const invitePromises = phoneNumbers.map(async (phoneNumber) => {
-      let user = await userModel.findOne({ phoneNumber });
-      if (!user) {
-        user = new userModel({ phoneNumber });
-        await user.save({ session });
-        console.log(`New user created for phone number: ${phoneNumber}`);
-      }
-      if (!circle.members.includes(user._id)) {
-        circle.members.push(user._id);
-      }
+        // Ensure owner is part of the members list
+        if (!memberIds.includes(ownerId.toString())) {
+            memberIds.push(ownerId);
+            console.log('Owner added to members:', ownerId);
+        }
 
-      const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
-      const message = `${req.user.name} has invited you to join the circle on App. Register here: ${inviteLink}`;
-      await invite([phoneNumber], message);
-      console.log(`Invitation sent to ${phoneNumber}`);
-    });
+        // Create circle object
+        const circle = new circleModel({
+            circleName,
+            circleImage,
+            description,
+            type,
+            interest, // This is a single interest string
+            members: memberIds,
+            owner: ownerId,
+            events: [],
+        });
 
-    await Promise.all(invitePromises);
-    console.log('All invitations processed successfully');
+        console.log('Creating circle with details:', circle);
 
-    const convos = new convosModel({ pinnedMessages: [] });
-    await convos.save({ session });
-    circle.convos = convos._id;
-    console.log('Created new conversation for the circle');
+        // Process invites for the phone numbers
+        const invitePromises = phoneNumbers.map(async (phoneNumber) => {
+          console.log(`Processing invite for phone number: ${phoneNumber}`);
+          
+          let user = await userModel.findOne({ phoneNumber });
+          if (!user) {
+              user = new userModel({ phoneNumber });
+              await user.save({ session });
+              console.log(`New user created for phone number: ${phoneNumber}`);
+          } else {
+              console.log(`User already exists for phone number: ${phoneNumber}`);
+          }
+      
+          // Check if the user is already a member of the circle
+          if (!circle.members.includes(user._id)) {
+              circle.members.push(user._id);
+              console.log(`User added to circle members: ${user._id}`);
+          } else {
+              console.log(`User already a member of the circle: ${user._id}`);
+          }
+      
+          // Create an invite for the user
+          const invites = new Invites({
+              phoneNumber,
+              invitedBy: ownerId,
+              circle: circle._id,
+          });
+          await invites.save({ session });
+          console.log(`Invite created for ${phoneNumber} with invite ID: ${invites._id}`);
+      
+          // Send invitation message
+          const inviteLink = `https://app.com/register?phone=${phoneNumber}`;
+          const message = `${req.user.name} has invited you to join the circle on App. Register here: ${inviteLink}`;
+          
+          try {
+              await invite([phoneNumber], message);
+              console.log(`Invitation sent to ${phoneNumber}`);
+          } catch (sendError) {
+              console.error(`Failed to send invitation to ${phoneNumber}:`, sendError);
+          }
+        });
+      
 
-    const eventTypes = [
-      { name: "Hangout", color: "green" },
-      { name: "Meeting", color: "orange" },
-      { name: "Trip Plan", color: "blue" },
-    ];
+        await Promise.all(invitePromises);
+        console.log('All invitations processed successfully');
 
-    const eventTypesPromises = eventTypes.map(async (eventType) => {
-      let existingEventType = await eventTypeModel.findOne({ name: eventType.name, color: eventType.color });
-      let newEventType;
-      if (!existingEventType) {
-        newEventType = new eventTypeModel(eventType);
-        await newEventType.save({ session });
-        console.log(`New event type created: ${eventType.name}`);
-      } else {
-        newEventType = existingEventType;
-        console.log(`Existing event type found: ${eventType.name}`);
-      }
-      circle.events.push(newEventType._id);
-    });
+        // Create a conversation for the circle
+        const convos = new convosModel({ pinnedMessages: [] });
+        await convos.save({ session });
+        circle.convos = convos._id;
+        console.log('Created new conversation for the circle');
 
-    await Promise.all(eventTypesPromises);
-    await circle.save({ session });
-    console.log('Circle saved successfully:', circle);
+        // Add event types (Hangout, Meeting, Trip Plan) to the circle
+        const eventTypes = [
+            { name: "Hangout", color: "green" },
+            { name: "Meeting", color: "orange" },
+            { name: "Trip Plan", color: "blue" },
+        ];
 
-    await userModel.updateMany(
-      { _id: { $in: circle.members } },
-      { $addToSet: { memberGroups: circle._id } },
-      { session }
-    );
-    console.log('Updated user memberGroups for circle:', circle._id);
+        const eventTypesPromises = eventTypes.map(async (eventType) => {
+            let existingEventType = await eventTypeModel.findOne({ name: eventType.name, color: eventType.color });
+            let newEventType;
+            if (!existingEventType) {
+                newEventType = new eventTypeModel(eventType);
+                await newEventType.save({ session });
+                console.log(`New event type created: ${eventType.name}`);
+            } else {
+                newEventType = existingEventType;
+                console.log(`Existing event type found: ${eventType.name}`);
+            }
+            circle.events.push(newEventType._id);
+        });
 
-    await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } }, { session });
-    console.log('Updated owner with ownedGroups:', ownerId);
+        await Promise.all(eventTypesPromises);
+        await circle.save({ session });
+        console.log('Circle saved successfully:', circle);
 
-    await session.commitTransaction();
-    session.endSession();
-    console.log('Transaction committed successfully');
-    return res.status(201).json({
-      success: true,
-      message: 'Circle created successfully, and invitations sent.',
-      circle,
-    });
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    console.error('Error creating circle:', error);
-    res.status(500).json({ error: 'Failed to create circle' });
-  }
+        // Update member groups for all users
+        await userModel.updateMany(
+            { _id: { $in: circle.members } },
+            { $addToSet: { memberGroups: circle._id } },
+            { session }
+        );
+        console.log('Updated user memberGroups for circle:', circle._id);
+
+        // Update the owner's owned groups
+        await userModel.findByIdAndUpdate(ownerId, { $addToSet: { ownedGroups: circle._id } }, { session });
+        console.log('Updated owner with ownedGroups:', ownerId);
+
+        // ** Update interests of the owner **
+        if (interests && interests.length > 0) {
+            await userModel.findByIdAndUpdate(ownerId, { $addToSet: { interests: { $each: interests } } }, { session });
+            console.log(`Owner's interests updated with:`, interests);
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+        console.log('Transaction committed successfully');
+        return res.status(201).json({
+            success: true,
+            message: 'Circle created successfully, and invitations sent.',
+            circle,
+        });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error('Error creating circle:', error);
+        res.status(500).json({ error: 'Failed to create circle' });
+    }
 };
-
 
 /**
  * @description Get the members of a circle

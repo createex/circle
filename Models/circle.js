@@ -15,7 +15,6 @@ const circleSchema = new mongoose.Schema({
     events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventType' }],
     
 },
-
     { timestamps: true }
 );
 

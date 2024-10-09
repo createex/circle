@@ -15,7 +15,9 @@ const {
     checkUsersByPhoneNumbers,
     getProfile,
     getMembers,
-    editProfile
+    editProfile,
+    checkInvite,
+    getUserInterests
 } = require("../Controllers/auth");
 
 //Middlewares
@@ -39,6 +41,7 @@ router.post("/update-profile-picture", upload.single('profilePicture'), updatePr
 router.get("/profile", getProfile);
 router.get("/members", getMembers);
 router.put('/editProfile', editProfile);
-
+router.get('/check-invite', checkInvite);
+router.get('/user-intrests', getUserInterests);
 
 module.exports = router;
