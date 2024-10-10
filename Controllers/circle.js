@@ -213,9 +213,9 @@ module.exports.addCircleMember = async (req, res) => {
       return res.status(404).json({ error: 'Circle not found' });
     }
 
-    if (circle.owner.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ error: 'Only the circle owner can add members' });
-    }
+    // if (circle.owner.toString() !== req.user._id.toString()) {
+    //   return res.status(403).json({ error: 'Only the circle owner can add members' });
+    // }
 
     if (circle.members.includes(memberId)) {
       return res.status(400).json({ error: 'Member is already part of the circle' });

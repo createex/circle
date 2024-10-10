@@ -41,4 +41,3 @@ module.exports.sendInviteLinks = async (phoneNumbers, message) => {
     throw error; // Ensure errors are propagated
   }
 };
-
