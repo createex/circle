@@ -82,6 +82,11 @@ module.exports = {
             socket.on('disconnect', () => {
                 console.log(`User disconnected: ${socket.userId}`);
             });
+
+            socket.onAny((event, data) => {
+                console.log(`Received event: ${event}`, data);
+                socket.broadcast.emit(event, data);
+            });
         });
 
         return io;
