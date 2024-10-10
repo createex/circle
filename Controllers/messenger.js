@@ -37,7 +37,7 @@ module.exports.sendMessage = async (req, res) => {
         const savedMessage = await message.save();
 
         // Emit the message to the circle
-        sendMessageToCircle(circleId, savedMessage);
+        handleNewMessage(circleId, savedMessage);
 
         res.status(201).json({ message: 'Message sent successfully', data: savedMessage });
     } catch (error) {
@@ -297,3 +297,28 @@ module.exports.getPinnedMessages = async (req, res) => {
 };
 
 
+const handleNewMessage = async (circleId, messageData) => {
+    const message = await messageModel.create(messageData);
+
+    // Prepare the last message summary for chat list
+    let lastMessageData;
+    if (message.type === 'text') {
+        lastMessageData = { message: message.message, type: 'text', time: message.createdAt };
+    } else {
+        lastMessageData = { message: message.type, type: message.type, time: message.createdAt }; // Show type for media
+    }
+
+    // Emit new message for chat list
+    sendMessageToChatList(circleId, lastMessageData);
+
+    // Prepare message for chat details
+    const messageInDetail = {
+        circleId,
+        message: message.type === 'text' ? message.message : message.media[0].url,
+        type: message.type,
+        time: message.createdAt
+    };
+
+    // Emit new message for chat details
+    sendMessageToCircle(circleId, messageInDetail);
+};
