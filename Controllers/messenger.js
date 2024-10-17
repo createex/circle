@@ -68,14 +68,14 @@ module.exports.getMessages = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to view messages in this circle' });
         }
 
-        // Fetch messages sorted by oldest first
+        // Fetch the latest messages sorted by newest first, then reverse them
         const messages = await messageModel.find({ circleId: circleId })
             .populate('sender', 'name profilePicture _id')
             .populate({
                 path: 'planId',
                 populate: [{ path: 'eventType' }, { path: 'members', select: 'name email profilePicture _id' }]
             })
-            .sort({ createdAt: 1 })  // Oldest to newest
+            .sort({ createdAt: -1 })  // Get the newest messages first
             .skip(skip)
             .limit(limit)
             .exec();
@@ -83,8 +83,8 @@ module.exports.getMessages = async (req, res) => {
         // Count total messages for pagination metadata
         const totalMessages = await messageModel.countDocuments({ circleId: circleId });
 
-        // Map over messages to customize the output, including plan details if type is 'plan'
-        const result = messages.map(message => {
+        // Reverse the messages to display from oldest to newest
+        const result = messages.reverse().map(message => {
             const messageData = {
                 id: message._id,
                 type: message.type,
@@ -121,7 +121,7 @@ module.exports.getMessages = async (req, res) => {
         // Return the response including the circleId
         res.status(200).json({
             success: true,
-            data: result,  // Send the data as is (oldest first)
+            data: result,  // Oldest to newest (after reverse)
             circleId: circleId,  // Include circleId in the response
             pagination: {
                 total: totalMessages,
@@ -137,6 +137,7 @@ module.exports.getMessages = async (req, res) => {
         });
     }
 };
+
 
 
 /**
