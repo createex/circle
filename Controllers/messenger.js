@@ -117,9 +117,11 @@ module.exports.getMessages = async (req, res) => {
             return messageData;
         });
 
+        // Return the response including the circleId
         res.status(200).json({
             success: true,
             data: result,
+            circleId: circleId,  // Include circleId in the response
             pagination: {
                 total: totalMessages,
                 pages: Math.ceil(totalMessages / limit),
