@@ -68,14 +68,14 @@ module.exports.getMessages = async (req, res) => {
             return res.status(403).json({ message: 'You are not authorized to view messages in this circle' });
         }
 
-        // Fetch messages and conditionally populate plan details if the type is 'plan'
+        // Fetch messages sorted by oldest first
         const messages = await messageModel.find({ circleId: circleId })
             .populate('sender', 'name profilePicture _id')
             .populate({
                 path: 'planId',
                 populate: [{ path: 'eventType' }, { path: 'members', select: 'name email profilePicture _id' }]
             })
-            .sort({ createdAt: -1 })
+            .sort({ createdAt: 1 })  // Oldest to newest
             .skip(skip)
             .limit(limit)
             .exec();
@@ -117,10 +117,13 @@ module.exports.getMessages = async (req, res) => {
             return messageData;
         });
 
+        // Reverse result for mobile listview (so newest shows at the bottom)
+        const reversedResult = result.reverse();
+
         // Return the response including the circleId
         res.status(200).json({
             success: true,
-            data: result,
+            data: reversedResult,  // Reversed to match mobile listview scrolling
             circleId: circleId,  // Include circleId in the response
             pagination: {
                 total: totalMessages,
