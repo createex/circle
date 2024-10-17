@@ -100,6 +100,7 @@ module.exports.getMessages = async (req, res) => {
                 }))
             };
 
+            // Include plan details if message type is 'plan'
             if (message.type === 'plan' && message.planId) {
                 messageData.planDetails = {
                     planId: message.planId._id,
@@ -117,13 +118,10 @@ module.exports.getMessages = async (req, res) => {
             return messageData;
         });
 
-        // Reverse result for mobile listview (so newest shows at the bottom)
-        const reversedResult = result.reverse();
-
         // Return the response including the circleId
         res.status(200).json({
             success: true,
-            data: reversedResult,  // Reversed to match mobile listview scrolling
+            data: result,  // Send the data as is (oldest first)
             circleId: circleId,  // Include circleId in the response
             pagination: {
                 total: totalMessages,
@@ -139,6 +137,7 @@ module.exports.getMessages = async (req, res) => {
         });
     }
 };
+
 
 /**
  * @description get the conversations of a user (all circles)
