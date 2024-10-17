@@ -1,7 +1,7 @@
 // sendMessage controller
 const messageModel = require('../Models/message');
 const { messageSchema } = require('../Schemas/message');
-const { sendMessageToCircle } = require('../Socket/socketMethods');
+const { sendMessageToCircle, sendMessageToChatList } = require('../Socket/socketMethods');
 const circleModel = require('../Models/circle');
 const convosModel = require('../Models/convos');
 
