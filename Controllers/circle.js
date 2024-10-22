@@ -30,7 +30,7 @@ module.exports.createCircle = async (req, res) => {
         return res.status(400).json({ error: error.message });
     }
 
-    const { circleName, circleImage, description, type, interest, memberIds, phoneNumbers, interests } = req.body;
+    const { circleName, circleImage, description, type, circle_interests, memberIds, phoneNumbers, interests } = req.body;
     const ownerId = req.user._id;
 
     try {
