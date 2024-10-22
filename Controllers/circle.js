@@ -48,7 +48,7 @@ module.exports.createCircle = async (req, res) => {
             circleImage,
             description,
             type,
-            interest, // This is a single interest string
+            circle_interests, // Multiple interests for the circle
             members: memberIds,
             owner: ownerId,
             events: [],

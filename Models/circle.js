@@ -5,7 +5,7 @@ const circleSchema = new mongoose.Schema({
     circleImage: String,
     description: String,
     type: String,
-    interest: String,
+    circle_interests: [String],
     members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     convos: { type: mongoose.Schema.Types.ObjectId, ref: 'Convos' },
@@ -13,7 +13,6 @@ const circleSchema = new mongoose.Schema({
     todos: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Todo' }],
     //plans: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Plan' }],
     events: [{ type: mongoose.Schema.Types.ObjectId, ref: 'EventType' }],
-    
 },
     { timestamps: true }
 );
