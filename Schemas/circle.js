@@ -30,11 +30,14 @@ const circleSchema = joi.object({
         'any.required': `"type" is a required field`,
         'any.only': `"type" should be one of 'friend', 'family', 'organization', 'mix'`
     }),
-    circle_interests: Joi.array().items(Joi.string()).required(),
+    circle_interests: joi.array().items(joi.string()).required(),
     memberIds: memberIdsField,
     phoneNumbers: joi.array().items(joi.string()).messages({
         'array.base': `"phoneNumbers" should be a type of 'array'`,
     }),
+    interests: joi.array().items(joi.string()).messages({
+        'array.base': `"user_interests" should be an array of strings`
+    }), // For user interests
 });
 
 const todoSchema = joi.object({
